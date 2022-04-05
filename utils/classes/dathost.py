@@ -1,6 +1,7 @@
 import os
-from dotenv import load_dotenv
 import requests
+import json
+from dotenv import load_dotenv
 from botconfig import requiredEnv
 
 
@@ -14,7 +15,17 @@ class Dathost:
 
     def create_server(self, server_id):
         try:
-            return requests.post(f"https://dathost.net/api/0.1/game-servers/{server_id}/duplicate", auth=(self.user, self.auth))
+            with requests.post(f"https://dathost.net/api/0.1/game-servers/{server_id}/duplicate", auth=(self.user, self.auth)) as api_call:
+                return api_call
+        except requests.exceptions.RequestException as err:
+            print(f"Requests error: {err}")
+        except requests.exceptions.HTTPError as err:
+            print(f"Requests error: {err}")
+
+    def get_servers(self):
+        try:
+            with requests.get("https://dathost.net/api/0.1/game-servers", auth=(self.user, self.auth)) as api_call:
+                return api_call.json()
         except requests.exceptions.RequestException as err:
             print(f"Requests error: {err}")
         except requests.exceptions.HTTPError as err:
@@ -22,7 +33,8 @@ class Dathost:
 
     def start_server(self, server_id):
         try:
-            return requests.post(f"https://dathost.net/api/0.1/game-servers/{server_id}/start", auth=(self.user, self.auth))
+            with requests.post(f"https://dathost.net/api/0.1/game-servers/{server_id}/start", auth=(self.user, self.auth)) as api_call:
+                return api_call
         except requests.exceptions.RequestException as err:
             print(f"Requests error: {err}")
             return None
@@ -32,7 +44,8 @@ class Dathost:
 
     async def server_details(self, server_id):
         try:
-            return requests.get(f"https://dathost.net/api/0.1/game-servers/{server_id}", auth=(self.user, self.auth))
+            with requests.get(f"https://dathost.net/api/0.1/game-servers/{server_id}", auth=(self.user, self.auth)) as api_call:
+                return api_call
         except requests.exceptions.RequestException as err:
             print(f"Requests error: {err}")
             return None

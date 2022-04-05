@@ -1,4 +1,4 @@
-import nextcord
+from nextcord.ui import View
 from nextcord.ui import Button
 from nextcord import ButtonStyle, Interaction
 from utils.classes.buttons import PlayerButton, SettingsOvertime, SettingsTeamDamage, SettingsReady, TeamSelectionButton1, TeamSelectionButton2, TeamSelectionVote, TeamSelectionAccept, TeamSelectionShuffle, LaunchButton
@@ -6,11 +6,10 @@ from utils.classes.dropdowns import LocationDropdown, MapDropdown
 from utils.functions.serverconfigs import create_config_file, send_config_file, delete_config_file
 from utils.classes.dathost import Dathost
 from utils.classes.database import Database
-from scrimconfig import server_locations, map_pool
-import random
+from random import shuffle, sample, randint
 
 
-class TeamsVote(nextcord.ui.View):
+class TeamsVote(View):
     def __init__(self, player_list, captain1, captain2):
         super().__init__(timeout=None)
         self.player_list = player_list
@@ -36,9 +35,7 @@ class TeamsVote(nextcord.ui.View):
         return self.team1, self.team2
 
     def check_teams(self):
-        if len(self.team1) == 5 and len(self.team2) == 5:
-            return True
-        return False
+        return len(self.team1) == 5 and len(self.team2) == 5
 
     def check_current_turn(self):
         return self.current_turn
@@ -50,7 +47,7 @@ class TeamsVote(nextcord.ui.View):
         self.stop()
 
 
-class TeamSelection(nextcord.ui.View):
+class TeamSelection(View):
     def __init__(self, current_lobby):
         super().__init__(timeout=None)
         self.current_lobby = current_lobby
@@ -64,9 +61,9 @@ class TeamSelection(nextcord.ui.View):
         self.add_item(TeamSelectionAccept("Accept current teams"))
 
     def set_captains(self):
-        self.captain1, self.captain2 = random.sample(self.current_lobby, 2)
-        self.team_1.append(self.captain1)
-        self.team_2.append(self.captain2)
+        self.captain1, self.captain2 = sample(self.current_lobby, 2)
+        self.team_1 = [self.captain1]
+        self.team_2 = [self.captain2]
         return self.captain1, self.captain2
 
     def join_team_one(self, user):
@@ -82,7 +79,7 @@ class TeamSelection(nextcord.ui.View):
             self.team_2.append(user)
 
     def shuffle(self):
-        random_teams = random.shuffle(self.current_lobby)
+        shuffle(self.current_lobby)
         self.team_1 = self.current_lobby[-5:]
         self.team_2 = self.current_lobby[:-5]
 
@@ -99,8 +96,8 @@ class TeamSelection(nextcord.ui.View):
         return self.voting
 
 
-class Settings(nextcord.ui.View):
-    def __init__(self, available_locations):
+class Settings(View):
+    def __init__(self, available_locations, map_pool):
         super().__init__(timeout=None)
         self.overtime = False
         self.team_damage = True
@@ -150,10 +147,9 @@ class Settings(nextcord.ui.View):
         return self.available_locations
 
 
-class Launch(nextcord.ui.View):
+class Launch(View):
     def __init__(self, team1, team2, map,  host, ftp_user, ftp_password, location):
         super().__init__(timeout=None)
-        launch_options = ["start"]
         self.host = host
         self.location = location
         self.ftp_user = ftp_user
@@ -162,7 +158,7 @@ class Launch(nextcord.ui.View):
         self.team2 = team2
         self.team1_id = []
         self.team2_id = []
-        self.match_id = random.randint(0, 100000000000000)
+        self.match_id = randint(0, 100000000000000)
         self.map = map
         self.config_file = None
         self.add_item(LaunchButton("Restart", self.location))

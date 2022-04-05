@@ -6,16 +6,21 @@ from utils.classes.database import Database
 from utils.classes.dathost import Dathost
 from utils.functions.embeds import create_settings_embed, create_teams_embed, create_connect_embed
 from botconfig import TESTING_GUILD_IDS
-from scrimconfig import server_locations
+from scrimconfig import map_pool
 
 
 class scrim(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.lobby = []
+        self.map_pool = map_pool
+        self.dathost = Dathost()
 
     @nextcord.slash_command(name="join_lobby1", description="join scrim waiting lobby", guild_ids=[TESTING_GUILD_IDS])
     async def join_scrim(self, ctx):
+        servers = self.dathost.get_servers()
+        server_locations = [
+            (server['location'], server['id']) for server in servers if server['players_online'] == 0]
         if ctx.user.name not in self.lobby:
             database = Database()
             user = database.fetch_user(ctx.user.name)
@@ -27,7 +32,8 @@ class scrim(commands.Cog):
         elif ctx.user.name in self.lobby:
             await ctx.send("Already in the lobby", delete_after=5)
         if len(self.lobby) >= 1:
-            settings = Settings(server_locations)
+            settings = Settings([location[0]
+                                for location in server_locations], self.map_pool)
             # await settings.get_available_regions()
             embed = create_settings_embed()
             menu = await ctx.send("Menu", view=settings, embed=embed)
@@ -52,9 +58,8 @@ class scrim(commands.Cog):
                 host = "1"
                 ftp_user = "2"
                 ftp_password = "3"
-                locations_list = settings.show_available_locations()
-                index = [x[0] for x in locations_list].index(location)
-                server_id = locations_list[index][1]
+                index = [x[0] for x in server_locations].index(location)
+                server_id = server_locations[index][1]
                 launch = Launch(team1, team2, map,  host,
                                 ftp_user, ftp_password, server_id)
                 await menu.edit(view=launch)

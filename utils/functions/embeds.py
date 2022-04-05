@@ -20,7 +20,7 @@ def create_teams_embed(team_1=[], team_2=[], captain_1=None, captain_2=None):
     return teams_embed
 
 
-def create_connect_embed(data):
-    connect_embed = Embed(title=data[0])
-    connect_embed.add_field(name=data[1], value="GL & HF")
+def create_connect_embed(server):
+    connect_embed = Embed(title=server[0].upper())
+    connect_embed.add_field(name=server[1], value="GL & HF")
     return connect_embed

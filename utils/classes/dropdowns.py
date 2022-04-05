@@ -1,6 +1,6 @@
 from nextcord.ui import Select
 from nextcord import Interaction
-from utils.functions.embeds import create_settings_embed, create_teams_embed
+from utils.functions.embeds import create_settings_embed
 
 
 class LocationDropdown(Select):
