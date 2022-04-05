@@ -25,8 +25,7 @@ class Database:
 
     def fetch_user(self, user):
         try:
-            db = self.connect()
-            with db:
+            with self.connect() as db:
                 mycursor = db.cursor()
                 query = "SELECT * FROM users WHERE discord = '{user}'".format(
                     user=user)
@@ -38,8 +37,7 @@ class Database:
 
     def register_user(self, steam_id, discord_name):
         try:
-            db = self.connect()
-            with db:
+            with self.connect() as db:
                 mycursor = db.cursor()
                 mycursor.execute(
                     "INSERT INTO users (id, discord) VALUES (%s,%s)", (steam_id, discord_name))
