@@ -1,18 +1,21 @@
 from nextcord.ui import View
 from nextcord.ui import Button
 from nextcord import ButtonStyle, Interaction
-from utils.classes.buttons import PlayerButton, SettingsOvertime, SettingsTeamDamage, SettingsReady, TeamSelectionButton1, TeamSelectionButton2, TeamSelectionVote, TeamSelectionAccept, TeamSelectionShuffle, LaunchButton
+from utils.classes.buttons import PlayerVotingButton, SettingsOvertime, SettingsTeamDamage, SettingsReady, TeamSelectionButton, TeamSelectionVote, TeamSelectionAccept, TeamSelectionShuffle, LaunchButton
 from utils.classes.dropdowns import LocationDropdown, MapDropdown
 from utils.functions.serverconfigs import create_config_file, send_config_file, delete_config_file
 from utils.classes.dathost import Dathost
 from utils.classes.database import Database
 from random import shuffle, sample, randint
+import requests
+from botconfig import API_BASE_URL, API_PORT
 
 
 class TeamsVote(View):
-    def __init__(self, player_list, captain1, captain2):
+    def __init__(self, player_list, captain1, captain2, title):
         super().__init__(timeout=None)
         self.player_list = player_list
+        self.title = title
         self.team1 = []
         self.team2 = []
         self.current_turn = 0
@@ -20,9 +23,10 @@ class TeamsVote(View):
         self.captain2 = captain2
         self.team1.append(captain1)
         self.team2.append(captain2)
-        for player in player_list:
-            if player is not self.captain1 and player is not self.captain2:
-                self.add_item(PlayerButton(
+        self.player_list.remove(captain1)
+        self.player_list.remove(captain2)
+        for player in self.player_list:
+            self.add_item(PlayerVotingButton(
                     player, self.captain1, self.captain2))
 
     def add_team_one(self, user):
@@ -44,22 +48,40 @@ class TeamsVote(View):
         self.current_turn += 1
 
     def finalize(self):
+        team1, team2 = self.get_teams()
+        data = {
+            "title": self.title,
+            "team_one": team1,
+            "team_two": team2
+        }
+        requests.put(f"http://{API_BASE_URL}:{API_PORT}/reenit/", json=data)
         self.stop()
 
 
 class TeamSelection(View):
-    def __init__(self, current_lobby):
+    def __init__(self, title):
         super().__init__(timeout=None)
-        self.current_lobby = current_lobby
+        self.current_title = title
         self.team_1 = []
         self.team_2 = []
+        self.current_lobby = []
         self.voting = False
-        self.add_item(TeamSelectionButton1("Join team one"))
-        self.add_item(TeamSelectionButton2("Join team two"))
+        self.add_item(TeamSelectionButton("Join team one", self.current_title, 1))
+        self.add_item(TeamSelectionButton("Join team two", self.current_title, 2))
         self.add_item(TeamSelectionVote("vote for teams"))
-        self.add_item(TeamSelectionShuffle("Shuffle"))
+        self.add_item(TeamSelectionShuffle("Shuffle", self.current_title))
         self.add_item(TeamSelectionAccept("Accept current teams"))
-
+        self.get_data()
+    def get_data(self):
+        payload = {
+            "title": self.current_title
+        }
+        check_for_lobby = requests.get(f"http://{API_BASE_URL}:{API_PORT}/reenit/scrim/", json=payload)
+        print(check_for_lobby.json())
+        self.team_1 = check_for_lobby.json()["lobby"][0]["team_one"]
+        self.team_2 = check_for_lobby.json()["lobby"][0]["team_two"]
+        self.current_lobby = [player["username"] for player in check_for_lobby.json()["players"]]
+        return check_for_lobby.json()
     def set_captains(self):
         self.captain1, self.captain2 = sample(self.current_lobby, 2)
         self.team_1 = [self.captain1]
@@ -67,6 +89,7 @@ class TeamSelection(View):
         return self.captain1, self.captain2
 
     def join_team_one(self, user):
+        print(self.team_1)
         if user in self.current_lobby and len(self.team_1) <= 4:
             if user in self.team_2:
                 self.team_2.remove(user)
@@ -101,7 +124,7 @@ class Settings(View):
         super().__init__(timeout=None)
         self.overtime = False
         self.team_damage = True
-        self.map = None
+        self.map = []
         self.location = None
         self.available_locations = available_locations
         self.add_item(SettingsOvertime("overtime"))
@@ -120,7 +143,7 @@ class Settings(View):
         self.location = location
 
     def set_map(self, new_map):
-        self.map = new_map
+        self.map.append(new_map)
 
     def get_settings(self):
         return self.overtime, self.team_damage, self.map, self.location
@@ -128,63 +151,15 @@ class Settings(View):
     def set_ready(self):
         self.stop()
 
-    # async def set_available_regions(self):
-    #     available_location = []
-    #     dathost = Dathost()
-    #     for location in server_locations:
-    #         current_location = server_locations[location]
-    #         for server in current_location:
-    #             current_server = await dathost.server_details(server)
-    #             if current_server is not None and current_server.status_code == 200:
-    #                 data = current_server.json()
-    #                 if data['players_online'] == 0:
-    #                     available_location.append((location, server))
-    #     self.available_locations = available_location
-    #     self.add_item(LocationDropdown(self.available_locations))
-    #     return self.available_locations
-
-    def show_available_locations(self):
-        return self.available_locations
-
 
 class Launch(View):
-    def __init__(self, team1, team2, map,  host, ftp_user, ftp_password, location):
+    def __init__(self, team1, team2, map, location):
         super().__init__(timeout=None)
-        self.host = host
         self.location = location
-        self.ftp_user = ftp_user
-        self.ftp_password = ftp_password
         self.team1 = team1
         self.team2 = team2
-        self.team1_id = []
-        self.team2_id = []
-        self.match_id = randint(0, 100000000000000)
         self.map = map
-        self.config_file = None
         self.add_item(LaunchButton("Restart", self.location))
-        self.get_steam64()
-
-    def get_steam64(self):
-        database = Database()
-        for user in self.team1:
-            user_id = database.fetch_user(user)
-            self.team1_id.append(user_id)
-        for user in self.team2:
-            user_id = database.fetch_user(user)
-            self.team2_id.append(user_id)
-
-    def create_config_bytes(self):
-        self.config_file = create_config_file(
-            self.map, self.match_id, self.team1_id, self.team2_id)
-
-    def send_config_file(self):
-        status = send_config_file(
-            self.config_file, self.host, self.ftp_user, self.ftp_password)
-        return status
-
-    def delete_config_file(self):
-        status = delete_config_file(self.ftp_user, self.ftp_password)
-        return status
 
     async def launch_server(self):
         dathost = Dathost()

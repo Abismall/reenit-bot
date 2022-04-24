@@ -1,11 +1,12 @@
 import json
 import ftplib
 from io import BytesIO
+from botconfig import API_BASE_URL, API_PORT
 
 
-def create_config_file(map_list, match_id, team1_steamIDs, team2_steamIDs):
+def create_config_file(map_list, match_id, team1_steamIDs, team2_steamIDs, captain1, captain2):
     match_config = {
-        'matchid': match_id,
+        'matchid': str(match_id),
         'num_maps': 1,
         'maplist': map_list,
         'skip_veto': True,
@@ -14,18 +15,19 @@ def create_config_file(map_list, match_id, team1_steamIDs, team2_steamIDs):
         'players_per_team': 5,
         'min_players_to_ready': 1,
         'team1': {
-            'name': "Abis & kopla",
+            'name': f"{captain1} & kopla",
             'flag': "Fi",
             'players': team1_steamIDs
         },
         'team2': {
-            'name': "Abis & kopla",
+            'name': f"{captain2} & kopla",
             'flag': "Fi",
             'players': team2_steamIDs
         },
         'cvars': {
-            'get5_print_damage': 0,
-            'mp_halftime_duration': 15,
+            'get5_event_api_url': f"http://{API_BASE_URL}:{API_PORT}/servers/status/",
+            
+            
         },
     }
     config_encode_data = json.dumps(match_config, indent=2).encode('utf-8')

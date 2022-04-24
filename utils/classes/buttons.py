@@ -2,6 +2,8 @@ from nextcord import ButtonStyle, Interaction
 from nextcord.ui import Button
 from utils.functions.embeds import create_settings_embed, create_teams_embed
 from utils.classes.dathost import Dathost
+from botconfig import API_BASE_URL, API_PORT
+import requests
 
 
 class LaunchButton(Button):
@@ -14,7 +16,7 @@ class LaunchButton(Button):
         pass
 
 
-class PlayerButton(Button):
+class PlayerVotingButton(Button):
     def __init__(self, player, captain1, captain2):
         super().__init__(style=ButtonStyle.green, label=player)
         self.captain1 = captain1
@@ -96,34 +98,26 @@ class SettingsTeamDamage(Button):
         await interaction.response.edit_message(view=self.view, embed=settings_embed)
 
 
-class TeamSelectionButton1(Button):
-    def __init__(self, label):
-        super().__init__(style=ButtonStyle.red, label=label)
-
-    async def callback(self, interaction=Interaction):
-        user = interaction.user.name
-        self.view.join_team_one(user)
-        team1, team2 = self.view.get_teams()
-        if len(team1) == 5:
-            self.disabled = True
-        else:
-            self.disabled = False
-        teams_embed = create_teams_embed(team1, team2)
-        await interaction.response.edit_message(view=self.view, embed=teams_embed)
-
-
-class TeamSelectionButton2(Button):
-    def __init__(self, label):
+class TeamSelectionButton(Button):
+    def __init__(self, label, title, team):
         super().__init__(style=ButtonStyle.blurple, label=label)
-
+        self.title = title
+        self.team = team
     async def callback(self, interaction=Interaction):
-        user = interaction.user.name
-        self.view.join_team_two(user)
+        team1,team2 = self.view.get_teams()
+        if self.team == 1 and interaction.user.name not in team1:
+            self.view.join_team_one(interaction.user.name)
+        if self.team == 2 and interaction.user.name not in team2:
+            self.view.join_team_two(interaction.user.name)
         team1, team2 = self.view.get_teams()
-        if len(team2) == 5:
-            self.disabled = True
-        else:
-            self.disabled = False
+        data = {
+            "title": self.title,
+            "team_one": team1,
+            "team_two": team2
+        }
+        print(team1, team2)
+        x = requests.put(f"http://{API_BASE_URL}:{API_PORT}/reenit/", json=data)
+        print(x)
         teams_embed = create_teams_embed(team1, team2)
         await interaction.response.edit_message(view=self.view, embed=teams_embed)
 
@@ -146,11 +140,19 @@ class TeamSelectionAccept(Button):
 
 
 class TeamSelectionShuffle(Button):
-    def __init__(self, label):
+    def __init__(self, label, title):
         super().__init__(style=ButtonStyle.green, label=label, row=1)
+        self.title = title
 
     async def callback(self, interaction=Interaction):
         self.view.shuffle()
         team1, team2 = self.view.get_teams()
+        data = {
+            "title": self.title,
+            "team_one": team1,
+            "team_two": team2,
+          
+        }
+        requests.put(f"http://{API_BASE_URL}:{API_PORT}/reenit/", json=data)
         teams_embed = create_teams_embed(team1, team2)
         await interaction.response.edit_message(view=self.view, embed=teams_embed)
