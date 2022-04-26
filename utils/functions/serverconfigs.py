@@ -35,7 +35,7 @@ def create_config_file(map_list, match_id, team1_steamIDs, team2_steamIDs, capta
     return configs_bytes
 
 
-async def send_config_file(configs, host, ftp_user, ftp_password):
+def send_config_file(configs, host, ftp_user, ftp_password):
     try:
         with ftplib.FTP(host, ftp_user, ftp_password, timeout=30) as ftp:
             ftp.login
@@ -46,7 +46,7 @@ async def send_config_file(configs, host, ftp_user, ftp_password):
         return False
 
 
-async def delete_config_file(ftp_user, ftp_password):
+def delete_config_file(ftp_user, ftp_password):
     try:
         with ftplib.FTP('styr.dathost.net', ftp_user, ftp_password) as ftp:
             ftp.delete("reenit_match_configs.json")

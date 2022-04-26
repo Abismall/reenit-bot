@@ -7,11 +7,13 @@ class LocationDropdown(Select):
     def __init__(self, locations):
         super().__init__(placeholder="location")
         for location in locations:
-            self.add_option(value=location,
-                            label=location, default=False)
+            self.add_option(value=location[0],
+                            label=location[0], default=False)
 
     async def callback(self, interaction=Interaction):
-        self.view.set_location(self.values[0])
+        self.view.set_location_and_server_id(self.values[0])
+        self.view.update_lobby()
+        self.disabled = True
         overtime, team_damage, map, location = self.view.get_settings()
         settings_embed = create_settings_embed(
             overtime, team_damage, map, location)
