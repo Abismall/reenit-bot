@@ -11,7 +11,7 @@ class Dathost:
     def __str__(self):
         return self.user
 
-    def create_server(self, server_id):
+    async def create_server(self, server_id):
         try:
             with requests.post(f"https://dathost.net/api/0.1/game-servers/{server_id}/duplicate", auth=(self.user, self.auth)) as api_call:
                 return api_call
@@ -29,7 +29,7 @@ class Dathost:
         except requests.exceptions.HTTPError as err:
             print(f"Requests error: {err}")
 
-    def start_server(self, server_id):
+    async def start_server(self, server_id):
         try:
             with requests.post(f"https://dathost.net/api/0.1/game-servers/{server_id}/start", auth=(self.user, self.auth)) as api_call:
                 return api_call
@@ -40,7 +40,7 @@ class Dathost:
             print(f"Requests error: {err}")
             return None
 
-    def server_details(self, server_id):
+    async def server_details(self, server_id):
         try:
             with requests.get(f"https://dathost.net/api/0.1/game-servers/{server_id}", auth=(self.user, self.auth)) as api_call:
                 return api_call
